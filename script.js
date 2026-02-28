@@ -709,6 +709,7 @@ function decodePayload(bits) {
   
   let text = "";
   let charCodes = [];
+  let validCharCount = 0;
   
   for (let i = 0; i < paddedBits.length; i += 8) {
     const byte = paddedBits.slice(i, i + 8);
@@ -719,9 +720,10 @@ function decodePayload(bits) {
     const charCode = parseInt(byte, 2);
     charCodes.push({ byte, charCode });
     
-    // Accept printable ASCII and common control characters
+    // Accept printable ASCII (including space!) and common control characters
     if ((charCode >= 32 && charCode <= 126) || charCode === 10 || charCode === 13 || charCode === 9) {
       text += String.fromCharCode(charCode);
+      validCharCount++;
     } else if (charCode === 0) {
       // Stop at null terminator if present
       break;
@@ -733,38 +735,45 @@ function decodePayload(bits) {
 
   log("rx-log", `[DEBUG] Char mapping: ${charCodes.map(c => `${c.byte}(${c.charCode}:${String.fromCharCode(c.charCode) || '?'})`).join(" | ")}`, "info");
 
-  // Remove trailing padding/garbage
-  text = text.trim();
+  // Only trim null bytes and actual garbage at the END, not spaces
+  // Remove only trailing null/control chars that are not spaces or normal punctuation
+  text = text.replace(/[\x00-\x08\x0e-\x1f]*$/, "");
 
-  if (text.length === 0) {
+  if (validCharCount === 0) {
     // Try alternate alignments if nothing was decoded
-    log("rx-log", `[DEBUG] Standard alignment produced no text. Trying alternate alignments...`, "warn");
+    log("rx-log", `[DEBUG] Standard alignment produced no valid text. Trying alternate alignments...`, "warn");
     
     for (let shift = 1; shift < 8; shift++) {
       const shiftedBits = bits.slice(shift);
       const shiftedPadded = shiftedBits.padEnd(Math.ceil(shiftedBits.length / 8) * 8, "0");
       
       let altText = "";
+      let altValidCount = 0;
       for (let i = 0; i < shiftedPadded.length; i += 8) {
         const byte = shiftedPadded.slice(i, i + 8);
         if (byte.length < 8) break;
         const charCode = parseInt(byte, 2);
         if ((charCode >= 32 && charCode <= 126) || charCode === 10 || charCode === 13 || charCode === 9) {
           altText += String.fromCharCode(charCode);
+          altValidCount++;
         } else if (charCode === 0) {
           break;
         }
       }
       
-      if (altText.trim().length > 0) {
-        log("rx-log", `[DEBUG] Shift by ${shift} bits produced: "${altText}"`, "info");
-        text = altText.trim();
+      // Check if we got any valid characters (not just spaces)
+      if (altValidCount > 0) {
+        // Clean trailing garbage but preserve spaces
+        altText = altText.replace(/[\x00-\x08\x0e-\x1f]*$/, "");
+        log("rx-log", `[DEBUG] Shift by ${shift} bits produced: "${altText}" (${altValidCount} valid chars)`, "info");
+        text = altText;
         break;
       }
     }
   }
 
-  if (text.length === 0) {
+  // Final validation - must have at least one non-space character
+  if (text.replace(/\s/g, "").length === 0) {
     log("rx-log", "✗ Decode error: No valid characters extracted from any alignment", "err");
     return;
   }
