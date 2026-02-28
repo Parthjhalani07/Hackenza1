@@ -641,13 +641,14 @@ function processBit(bit) {
       `RECEIVING DATA — ${rxBitBuffer.length} bits (${charsDone} chars decoded)`,
       "�●");
 
-    // ── POSTAMBLE DETECTION (SLIDING WINDOW) ──
-    // Check if last 8 bits match postamble (sliding window, not just at byte boundary)
-    if (rxBitBuffer.length >= POSTAMBLE.length) {
+    // ── POSTAMBLE DETECTION (BYTE-ALIGNED ONLY) ──
+    // Only check for postamble at byte boundaries to prevent false positives
+    // The space char (00100000) can create confusing patterns when followed by other bits
+    if (rxBitBuffer.length >= POSTAMBLE.length && rxBitBuffer.length % 8 === 0) {
       const lastByte = rxBitBuffer.slice(-POSTAMBLE.length).join("");
       
       if (lastByte === POSTAMBLE) {
-        // ✓ Postamble detected!
+        // ✓ Postamble detected at byte boundary!
         clearInterval(sampleInterval); 
 
         // Extract payload: everything EXCEPT the last 8 bits (the postamble)
@@ -655,8 +656,10 @@ function processBit(bit) {
           .slice(0, rxBitBuffer.length - POSTAMBLE.length)
           .join("");
 
-        log("rx-log", `★ POSTAMBLE DETECTED [${POSTAMBLE}] at position ${rxBitBuffer.length - POSTAMBLE.length}`, "ok");
-        log("rx-log", `Payload extracted: ${payloadBits.length} bits`, "ok");
+        log("rx-log", `★ POSTAMBLE DETECTED [${POSTAMBLE}] at byte-aligned position ${rxBitBuffer.length - POSTAMBLE.length}`, "ok");
+        log("rx-log", `Payload extracted: ${payloadBits.length} bits (${Math.floor(payloadBits.length / 8)} complete bytes)`, "ok");
+        log("rx-log", `[DEBUG] Full buffer before extraction: ${rxBitBuffer.join("")}`, "info");
+        log("rx-log", `[DEBUG] Payload bits: ${payloadBits}`, "info");
         decodePayload(payloadBits);
 
         setRxState("COMPLETE");
@@ -681,8 +684,13 @@ function updateLiveDecode() {
   for (let i = 0; i < fullChars; i++) {
     const byte = rxBitBuffer.slice(i * 8, (i + 1) * 8).join("");
     const charCode = parseInt(byte, 2);
+    // Show printable ASCII including spaces (32-126) normally, use dot for others
     if (charCode >= 32 && charCode <= 126) {
       decodedSoFar += String.fromCharCode(charCode);
+    } else if (charCode === 9) {
+      decodedSoFar += "→"; // Tab
+    } else if (charCode === 10) {
+      decodedSoFar += "↵"; // Newline
     } else {
       decodedSoFar += "·"; 
     }
