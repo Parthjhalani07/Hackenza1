@@ -992,3 +992,80 @@ function speakText(text) {
   window.speechSynthesis.speak(utterance);
   log("rx-log", `\uD83D\uDD0A Speaking: "${text}"`, "info");
 }
+
+// ─────────────────────────────────────────────
+//  ████████  VOLUME BUTTON CONTROLS  ████████
+// ─────────────────────────────────────────────
+
+/** Programmatically switch to a panel ("sender" or "receiver") */
+function switchToPanel(mode) {
+  const btn = document.querySelector(`.mode-btn[data-mode="${mode}"]`);
+  if (btn) btn.click();
+}
+
+/** Get which panel is currently active */
+function getActivePanel() {
+  return document.getElementById("panel-sender").classList.contains("active")
+    ? "sender" : "receiver";
+}
+
+// Double-click detection state
+let volUpLastTime = 0;
+const DOUBLE_CLICK_MS = 400;
+
+document.addEventListener("keydown", (e) => {
+  const key = e.key;
+
+  // ── VOLUME UP ──
+  if (key === "AudioVolumeUp") {
+    e.preventDefault();
+    const now = Date.now();
+    const panel = getActivePanel();
+
+    if (panel === "sender") {
+      // Check for double-click → switch to receiver
+      if (now - volUpLastTime < DOUBLE_CLICK_MS) {
+        volUpLastTime = 0;
+        switchToPanel("receiver");
+        log("tx-log", "\u2328 Vol+ double \u2192 Receiver", "info");
+      } else {
+        // Single click: start/stop voice recording
+        volUpLastTime = now;
+        setTimeout(() => {
+          if (volUpLastTime === now) {
+            btnMic.click();
+          }
+        }, DOUBLE_CLICK_MS);
+      }
+    } else if (panel === "receiver") {
+      // Single click: return to sender
+      switchToPanel("sender");
+      log("rx-log", "\u2328 Vol+ \u2192 Sender", "info");
+    }
+  }
+
+  // ── VOLUME DOWN ──
+  if (key === "AudioVolumeDown") {
+    e.preventDefault();
+    const panel = getActivePanel();
+
+    if (panel === "sender") {
+      // Single click: transmit
+      if (!btnTransmit.disabled) {
+        btnTransmit.click();
+        log("tx-log", "\u2328 Vol- \u2192 Transmit", "info");
+      } else {
+        log("tx-log", "\u2328 Vol- \u2192 Encode a message first.", "err");
+      }
+    } else if (panel === "receiver") {
+      // Single click: start/stop receiving
+      if (rxState === "IDLE" || rxState === "COMPLETE") {
+        btnRxStart.click();
+        log("rx-log", "\u2328 Vol- \u2192 Start Receiver", "info");
+      } else {
+        btnRxStop.click();
+        log("rx-log", "\u2328 Vol- \u2192 Stop Receiver", "info");
+      }
+    }
+  }
+});
