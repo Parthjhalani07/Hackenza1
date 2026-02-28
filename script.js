@@ -708,25 +708,22 @@ function decodePayload(bits) {
     return;
   }
 
-  log("rx-log", `[DEBUG] Raw received bits: ${bits} (${bits.length} bits)`, "info");
+  log("rx-log", `[DEBUG] Raw received bits: ${bits}`, "info");
+  log("rx-log", `[DEBUG] Length: ${bits.length} bits (${Math.floor(bits.length / 8)} complete bytes, ${bits.length % 8} remaining bits)`, "info");
 
-  // Pad to nearest 8-bit boundary for safety
-  const paddedBits = bits.padEnd(Math.ceil(bits.length / 8) * 8, "0");
-  
-  log("rx-log", `[DEBUG] Padded bits: ${paddedBits}`, "info");
-  
+  // NO padding - work with exact bits received
   let text = "";
   let charCodes = [];
   let validCharCount = 0;
   
-  for (let i = 0; i < paddedBits.length; i += 8) {
-    const byte = paddedBits.slice(i, i + 8);
-    
-    // Skip incomplete bytes
-    if (byte.length < 8) break;
-    
+  // Process only complete 8-bit bytes
+  const completeBytes = Math.floor(bits.length / 8);
+  log("rx-log", `[DEBUG] Processing ${completeBytes} complete bytes...`, "info");
+  
+  for (let i = 0; i < completeBytes; i++) {
+    const byte = bits.slice(i * 8, (i + 1) * 8);
     const charCode = parseInt(byte, 2);
-    charCodes.push({ byte, charCode });
+    charCodes.push({ byte, charCode, char: String.fromCharCode(charCode) });
     
     // Accept printable ASCII (including space!) and common control characters
     if ((charCode >= 32 && charCode <= 126) || charCode === 10 || charCode === 13 || charCode === 9) {
@@ -736,57 +733,27 @@ function decodePayload(bits) {
       // Stop at null terminator if present
       break;
     } else {
-      // Replace unprintable with placeholder
-      text += "?";
+      // For non-printable, show what it is
+      text += `[${charCode}]`;
     }
   }
 
-  log("rx-log", `[DEBUG] Char mapping: ${charCodes.map(c => `${c.byte}(${c.charCode}:${String.fromCharCode(c.charCode) || '?'})`).join(" | ")}`, "info");
+  // Log each decoded byte
+  const charMapStr = charCodes.map((c, idx) => 
+    `[${idx}]: ${c.byte} = ${c.charCode} = '${c.char}' ${(c.charCode >= 32 && c.charCode <= 126) ? '✓' : '✗'}`
+  ).join(" | ");
+  log("rx-log", `[DEBUG] Byte-by-byte: ${charMapStr}`, "info");
 
-  // Only trim null bytes and actual garbage at the END, not spaces
-  // Remove only trailing null/control chars that are not spaces or normal punctuation
-  text = text.replace(/[\x00-\x08\x0e-\x1f]*$/, "");
+  // Clean up text - remove any [...] markers for non-printable if they weren't useful
+  text = text.replace(/\s+$/g, ""); // Only trim trailing whitespace at very end
+  text = text.replace(/[\x00-\x08\x0e-\x1f\x7f]*$/g, ""); // Remove trailing control chars
 
   if (validCharCount === 0) {
-    // Try alternate alignments if nothing was decoded
-    log("rx-log", `[DEBUG] Standard alignment produced no valid text. Trying alternate alignments...`, "warn");
-    
-    for (let shift = 1; shift < 8; shift++) {
-      const shiftedBits = bits.slice(shift);
-      const shiftedPadded = shiftedBits.padEnd(Math.ceil(shiftedBits.length / 8) * 8, "0");
-      
-      let altText = "";
-      let altValidCount = 0;
-      for (let i = 0; i < shiftedPadded.length; i += 8) {
-        const byte = shiftedPadded.slice(i, i + 8);
-        if (byte.length < 8) break;
-        const charCode = parseInt(byte, 2);
-        if ((charCode >= 32 && charCode <= 126) || charCode === 10 || charCode === 13 || charCode === 9) {
-          altText += String.fromCharCode(charCode);
-          altValidCount++;
-        } else if (charCode === 0) {
-          break;
-        }
-      }
-      
-      // Check if we got any valid characters (not just spaces)
-      if (altValidCount > 0) {
-        // Clean trailing garbage but preserve spaces
-        altText = altText.replace(/[\x00-\x08\x0e-\x1f]*$/, "");
-        log("rx-log", `[DEBUG] Shift by ${shift} bits produced: "${altText}" (${altValidCount} valid chars)`, "info");
-        text = altText;
-        break;
-      }
-    }
-  }
-
-  // Final validation - must have at least one non-space character
-  if (text.replace(/\s/g, "").length === 0) {
-    log("rx-log", "✗ Decode error: No valid characters extracted from any alignment", "err");
+    log("rx-log", "✗ No valid characters in standard alignment. Check received bits.", "err");
     return;
   }
 
-  log("rx-log", `✓ Decoded: "${text}" (${bits.length} bits → ${text.length} chars)`, "ok");
+  log("rx-log", `✓ Decoded (${completeBytes} bytes): "${text}" (${validCharCount} valid chars)`, "ok");
 
   decodedOutput.textContent = text;
   decodedOutput.classList.add("flash");
