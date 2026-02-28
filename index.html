@@ -1,14 +1,17 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
   <title>LI-FI // OWC TERMINAL</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap"
+    rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
 </head>
+
 <body>
 
   <div class="scanlines"></div>
@@ -17,7 +20,9 @@
     <div class="boot-logo">
       <span class="boot-title">LI-FI</span>
       <span class="boot-sub">OPTICAL WIRELESS COMMUNICATION TERMINAL</span>
-      <div class="boot-bar-wrap"><div class="boot-bar" id="boot-bar"></div></div>
+      <div class="boot-bar-wrap">
+        <div class="boot-bar" id="boot-bar"></div>
+      </div>
       <span class="boot-status" id="boot-status">INITIALIZING...</span>
     </div>
   </div>
@@ -44,7 +49,10 @@
 
         <div class="sender-controls">
           <div class="section-label">// INPUT MESSAGE</div>
-          <textarea id="sender-input" placeholder="Type your message here..." maxlength="128"></textarea>
+          <div class="input-wrap">
+            <textarea id="sender-input" placeholder="Type your message here..." maxlength="128"></textarea>
+            <button id="btn-mic" class="mic-btn" title="Voice Input">🎤</button>
+          </div>
           <div class="char-count"><span id="char-count">0</span>/128</div>
 
           <div class="section-label">// BINARY PAYLOAD</div>
@@ -178,7 +186,13 @@
             </div>
           </div>
 
-          <div class="section-label">// DECODED MESSAGE</div>
+          <div class="section-label" style="display:flex;justify-content:space-between;align-items:center">
+            <span>// DECODED MESSAGE</span>
+            <label class="tts-toggle" title="Read aloud on receive">
+              <input type="checkbox" id="tts-enabled" checked />
+              <span class="tts-label">🔊 TTS</span>
+            </label>
+          </div>
           <div class="decoded-output" id="decoded-output">
             <span class="dim">Waiting for signal...</span>
           </div>
@@ -197,6 +211,8 @@
       </div>
     </section>
 
-  </div><script src="script.js"></script>
+  </div>
+  <script src="script.js"></script>
 </body>
+
 </html>

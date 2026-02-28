@@ -10,14 +10,14 @@
 // ─────────────────────────────────────────────
 //  PROTOCOL CONSTANTS
 // ─────────────────────────────────────────────
-const BIT_RATE_MS        = 300;     // milliseconds per bit
-const PREAMBLE           = "101011";
-const POSTAMBLE          = "00000011"; // 8-bit ETX (End of Text) byte
-const THRESHOLD_OFFSET   = 30;      // brightness units above ambient to call a "1"
-const CALIB_DURATION_MS  = 2000;    // how long to measure ambient during calibration
-const ROI_SIZE           = 50;      // pixels — size of the "Target Box" sample region
-const GRAPH_HISTORY      = 120;     // number of brightness samples to show on chart
-const EMA_ALPHA          = 0.02;    // exponential moving average coefficient for slow ambient drift
+const BIT_RATE_MS = 300;     // milliseconds per bit
+const PREAMBLE = "101011";
+const POSTAMBLE = "00000011"; // 8-bit ETX (End of Text) byte
+const THRESHOLD_OFFSET = 30;      // brightness units above ambient to call a "1"
+const CALIB_DURATION_MS = 2000;    // how long to measure ambient during calibration
+const ROI_SIZE = 50;      // pixels — size of the "Target Box" sample region
+const GRAPH_HISTORY = 120;     // number of brightness samples to show on chart
+const EMA_ALPHA = 0.02;    // exponential moving average coefficient for slow ambient drift
 
 // ─────────────────────────────────────────────
 //  BOOT ANIMATION
@@ -31,7 +31,7 @@ const BOOT_MESSAGES = [
 ];
 
 (function bootSequence() {
-  const bar    = document.getElementById("boot-bar");
+  const bar = document.getElementById("boot-bar");
   const status = document.getElementById("boot-status");
   let i = 0;
   const interval = setInterval(() => {
@@ -61,9 +61,9 @@ document.querySelectorAll(".mode-btn").forEach(btn => {
     btn.classList.add("active");
 
     // Show correct panel
-    document.getElementById("panel-sender").classList.toggle("active",   mode === "sender");
+    document.getElementById("panel-sender").classList.toggle("active", mode === "sender");
     document.getElementById("panel-receiver").classList.toggle("active", mode === "receiver");
-    document.getElementById("panel-sender").classList.toggle("hidden",   mode !== "sender");
+    document.getElementById("panel-sender").classList.toggle("hidden", mode !== "sender");
     document.getElementById("panel-receiver").classList.toggle("hidden", mode !== "receiver");
 
     // Stop any active receiver when switching
@@ -96,17 +96,17 @@ function textToBinary(text) {
  */
 function binaryToText(binary) {
   if (!binary || binary.length === 0) return "";
-  
+
   // Trim to a multiple of 8
   const trimmed = binary.slice(0, Math.floor(binary.length / 8) * 8);
   let result = "";
-  
+
   for (let i = 0; i < trimmed.length; i += 8) {
     const byte = trimmed.slice(i, i + 8);
     if (byte.length !== 8) break;
-    
+
     const charCode = parseInt(byte, 2);
-    
+
     // Accept printable ASCII (32-126) and common control chars
     if ((charCode >= 32 && charCode <= 126) || [9, 10, 13].includes(charCode)) {
       result += String.fromCharCode(charCode);
@@ -118,7 +118,7 @@ function binaryToText(binary) {
       result += "";
     }
   }
-  
+
   return result;
 }
 
@@ -128,7 +128,7 @@ function log(elementId, message, type = "") {
   const entry = document.createElement("div");
   entry.className = `log-entry ${type}`;
   const now = new Date();
-  const ts = `${String(now.getHours()).padStart(2,"0")}:${String(now.getMinutes()).padStart(2,"0")}:${String(now.getSeconds()).padStart(2,"0")}`;
+  const ts = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}:${String(now.getSeconds()).padStart(2, "0")}`;
   entry.textContent = `[${ts}] ${message}`;
   container.appendChild(entry);
   container.scrollTop = container.scrollHeight;
@@ -136,9 +136,9 @@ function log(elementId, message, type = "") {
 
 /** Update the header signal indicator */
 function setSignal(state, label) {
-  const dot  = document.getElementById("signal-dot");
-  const lbl  = document.getElementById("signal-label");
-  dot.className  = "signal-dot " + state;
+  const dot = document.getElementById("signal-dot");
+  const lbl = document.getElementById("signal-label");
+  dot.className = "signal-dot " + state;
   lbl.textContent = label;
 }
 
@@ -146,25 +146,25 @@ function setSignal(state, label) {
 //  ████████  SENDER MODULE  ████████
 // ─────────────────────────────────────────────
 
-let txActive     = false;   
-let torchStream  = null;    
-let torchTrack   = null;    
-let useTorch     = false;   
+let txActive = false;
+let torchStream = null;
+let torchTrack = null;
+let useTorch = false;
 
 // DOM refs
-const senderInput     = document.getElementById("sender-input");
-const charCountEl     = document.getElementById("char-count");
-const binaryDisplay   = document.getElementById("binary-display");
-const frameData       = document.getElementById("frame-data");
-const btnConvert      = document.getElementById("btn-convert");
-const btnTransmit     = document.getElementById("btn-transmit");
-const indicatorWrap   = document.getElementById("flashlight-indicator");
-const indicatorState  = document.getElementById("indicator-state");
-const progressWrap    = document.getElementById("progress-wrap");
-const progressFill    = document.getElementById("progress-fill");
-const progressBit     = document.getElementById("progress-bit");
-const progressPct     = document.getElementById("progress-pct");
-const screenFlash     = document.getElementById("screen-flash");
+const senderInput = document.getElementById("sender-input");
+const charCountEl = document.getElementById("char-count");
+const binaryDisplay = document.getElementById("binary-display");
+const frameData = document.getElementById("frame-data");
+const btnConvert = document.getElementById("btn-convert");
+const btnTransmit = document.getElementById("btn-transmit");
+const indicatorWrap = document.getElementById("flashlight-indicator");
+const indicatorState = document.getElementById("indicator-state");
+const progressWrap = document.getElementById("progress-wrap");
+const progressFill = document.getElementById("progress-fill");
+const progressBit = document.getElementById("progress-bit");
+const progressPct = document.getElementById("progress-pct");
+const screenFlash = document.getElementById("screen-flash");
 
 // Live char counter
 senderInput.addEventListener("input", () => {
@@ -207,7 +207,7 @@ btnTransmit.addEventListener("click", async () => {
 
   txActive = true;
   btnTransmit.disabled = true;
-  btnConvert.disabled  = true;
+  btnConvert.disabled = true;
   progressWrap.classList.remove("hidden");
   setSignal("busy", "TRANSMITTING");
 
@@ -215,8 +215,8 @@ btnTransmit.addEventListener("click", async () => {
 
   txActive = false;
   btnTransmit.disabled = false;
-  btnConvert.disabled  = false;
-  setLight(false);  
+  btnConvert.disabled = false;
+  setLight(false);
   setIndicatorState("STANDBY", false);
   setSignal("idle", "IDLE");
   log("tx-log", "Transmission complete.", "ok");
@@ -242,9 +242,9 @@ async function initTorch() {
     } else {
       useTorch = false;
       log("tx-log", "Torch not supported → screen fallback", "info");
-      torchTrack.stop(); 
+      torchTrack.stop();
       torchStream = null;
-      torchTrack  = null;
+      torchTrack = null;
     }
   } catch (err) {
     useTorch = false;
@@ -256,7 +256,7 @@ async function setLight(on) {
   if (useTorch && torchTrack) {
     try {
       await torchTrack.applyConstraints({ advanced: [{ torch: on }] });
-    } catch (e) {}
+    } catch (e) { }
   } else {
     screenFlash.classList.remove("hidden", "on", "off");
     screenFlash.classList.add(on ? "on" : "off");
@@ -275,8 +275,8 @@ async function transmitFrame(frame) {
 
     const pct = Math.round(((i + 1) / total) * 100);
     progressFill.style.width = pct + "%";
-    progressBit.textContent  = `BIT ${i + 1}/${total}`;
-    progressPct.textContent  = pct + "%";
+    progressBit.textContent = `BIT ${i + 1}/${total}`;
+    progressPct.textContent = pct + "%";
 
     await sleep(BIT_RATE_MS);
   }
@@ -294,47 +294,47 @@ function setIndicatorState(label, isOn) {
 //  ████████  RECEIVER MODULE  ████████
 // ─────────────────────────────────────────────
 
-let rxState          = "IDLE";
-let rxStream         = null;    
-let rxAnimFrame      = null;    
-let threshold        = 128;     
-let ambientBaseline  = 0;       
-let rxBitBuffer      = [];      
-let preambleWindow   = [];      
-let graphData        = [];      
-let rxLoopActive     = false;   
-let lastSampleTime   = 0;       
-let sampleInterval   = null;    
-let messageCount     = 0;       
-let readingStartTime = 0;       
-let lastBitConfidence = 0;      
+let rxState = "IDLE";
+let rxStream = null;
+let rxAnimFrame = null;
+let threshold = 128;
+let ambientBaseline = 0;
+let rxBitBuffer = [];
+let preambleWindow = [];
+let graphData = [];
+let rxLoopActive = false;
+let lastSampleTime = 0;
+let sampleInterval = null;
+let messageCount = 0;
+let readingStartTime = 0;
+let lastBitConfidence = 0;
 
-const MAX_PAYLOAD_BITS    = 1200;   
-const READING_TIMEOUT_MS  = 60000;  
-const HYSTERESIS_BAND     = 8;      
+const MAX_PAYLOAD_BITS = 1200;
+const READING_TIMEOUT_MS = 60000;
+const HYSTERESIS_BAND = 8;
 
 // DOM refs
-const rxVideo       = document.getElementById("receiver-video");
-const hiddenCanvas  = document.getElementById("hidden-canvas");
-const graphCanvas   = document.getElementById("graph-canvas");
-const btnRxStart    = document.getElementById("btn-rx-start");
-const btnRxStop     = document.getElementById("btn-rx-stop");
-const btnCalibrate  = document.getElementById("btn-calibrate");
-const reticleBox    = document.getElementById("reticle-box");
-const rxStateBadge  = document.getElementById("rx-state-badge");
+const rxVideo = document.getElementById("receiver-video");
+const hiddenCanvas = document.getElementById("hidden-canvas");
+const graphCanvas = document.getElementById("graph-canvas");
+const btnRxStart = document.getElementById("btn-rx-start");
+const btnRxStop = document.getElementById("btn-rx-stop");
+const btnCalibrate = document.getElementById("btn-calibrate");
+const reticleBox = document.getElementById("reticle-box");
+const rxStateBadge = document.getElementById("rx-state-badge");
 const statThreshold = document.getElementById("stat-threshold");
-const statCurrent   = document.getElementById("stat-current");
-const statStatEl    = document.getElementById("stat-state");
-const statBitsEl    = document.getElementById("stat-bits");
+const statCurrent = document.getElementById("stat-current");
+const statStatEl = document.getElementById("stat-state");
+const statBitsEl = document.getElementById("stat-bits");
 const statConfidence = document.getElementById("stat-confidence");
-const bitBufferEl   = document.getElementById("bit-buffer");
+const bitBufferEl = document.getElementById("bit-buffer");
 const decodedOutput = document.getElementById("decoded-output");
-const liveDecode    = document.getElementById("live-decode");
+const liveDecode = document.getElementById("live-decode");
 const liveCharsCount = document.getElementById("live-chars-count");
 const liveBitsProgress = document.getElementById("live-bits-progress");
-const rxBanner      = document.getElementById("rx-status-banner");
-const rxBannerIcon  = document.getElementById("rx-banner-icon");
-const rxBannerText  = document.getElementById("rx-banner-text");
+const rxBanner = document.getElementById("rx-status-banner");
+const rxBannerIcon = document.getElementById("rx-banner-icon");
+const rxBannerText = document.getElementById("rx-banner-text");
 const messageHistory = document.getElementById("message-history");
 
 const graphCtx = graphCanvas.getContext("2d");
@@ -342,7 +342,7 @@ const hiddenCtx = hiddenCanvas.getContext("2d", { willReadFrequently: true });
 
 function resizeGraphCanvas() {
   const rect = graphCanvas.getBoundingClientRect();
-  graphCanvas.width  = rect.width  || 400;
+  graphCanvas.width = rect.width || 400;
   graphCanvas.height = rect.height || 120;
 }
 window.addEventListener("resize", resizeGraphCanvas);
@@ -376,8 +376,8 @@ async function startReceiver() {
   try {
     rxStream = await navigator.mediaDevices.getUserMedia({
       video: {
-        facingMode: "environment",  
-        width:  { ideal: 1280 },
+        facingMode: "environment",
+        width: { ideal: 1280 },
         height: { ideal: 720 },
         // Attempt to lock exposure and white balance
         advanced: [
@@ -396,7 +396,7 @@ async function startReceiver() {
   rxVideo.srcObject = rxStream;
   await new Promise(r => rxVideo.onloadedmetadata = r);
 
-  hiddenCanvas.width  = rxVideo.videoWidth  || 640;
+  hiddenCanvas.width = rxVideo.videoWidth || 640;
   hiddenCanvas.height = rxVideo.videoHeight || 480;
 
   btnRxStart.classList.add("hidden");
@@ -404,7 +404,7 @@ async function startReceiver() {
   setSignal("active", "RX LIVE");
   log("rx-log", `Camera started: ${hiddenCanvas.width}×${hiddenCanvas.height}`, "ok");
 
-  rxBitBuffer    = [];
+  rxBitBuffer = [];
   preambleWindow = [];
 
   startBrightnessLoop();
@@ -426,9 +426,9 @@ function stopReceiver() {
   rxVideo.srcObject = null;
   rxState = "IDLE";
   setRxState("IDLE");
-  rxBitBuffer    = [];
+  rxBitBuffer = [];
   preambleWindow = [];
-  graphData      = [];
+  graphData = [];
 
   btnRxStart.classList.remove("hidden");
   btnRxStop.classList.add("hidden");
@@ -447,7 +447,7 @@ function extractRoiBrightness() {
   const roiY = Math.floor((H - ROI_SIZE) / 2);
 
   const imageData = hiddenCtx.getImageData(roiX, roiY, ROI_SIZE, ROI_SIZE);
-  const pixels    = imageData.data; 
+  const pixels = imageData.data;
 
   let totalLuminance = 0;
   const numPixels = ROI_SIZE * ROI_SIZE;
@@ -470,7 +470,7 @@ function startBrightnessLoop() {
   function loop() {
     if (!rxLoopActive) return;
 
-    if (rxVideo.readyState >= 2) { 
+    if (rxVideo.readyState >= 2) {
       currentBrightness = extractRoiBrightness();
 
       statCurrent.textContent = Math.round(currentBrightness);
@@ -493,13 +493,13 @@ async function runCalibration() {
   log("rx-log", `Calibrating for ${CALIB_DURATION_MS}ms — keep light source away...`, "info");
 
   const samples = [];
-  const start   = Date.now();
+  const start = Date.now();
 
   while (Date.now() - start < CALIB_DURATION_MS) {
     if (rxVideo.readyState >= 2) {
       samples.push(extractRoiBrightness());
     }
-    await sleep(50); 
+    await sleep(50);
   }
 
   if (samples.length === 0) {
@@ -520,7 +520,7 @@ async function runCalibration() {
   log("rx-log", `Ambient: ${Math.round(ambientBaseline)}, Noise: ±${noiseStdDev.toFixed(1)}, Threshold: ${Math.round(threshold)}`, "ok");
 }
 
-let lastBitValue = "0";  
+let lastBitValue = "0";
 
 function startBitSampler() {
   clearInterval(sampleInterval);
@@ -545,8 +545,8 @@ function startBitSampler() {
     // ── TRUE MULTI-SAMPLING ──
     // Average the last 5 frames (~80ms of visual data) to smooth out underwater ripples
     const recentSamples = graphData.slice(-5);
-    const avgBrightness = recentSamples.length > 0 
-      ? recentSamples.reduce((a, b) => a + b, 0) / recentSamples.length 
+    const avgBrightness = recentSamples.length > 0
+      ? recentSamples.reduce((a, b) => a + b, 0) / recentSamples.length
       : currentBrightness;
 
     const brightness = avgBrightness;
@@ -556,7 +556,7 @@ function startBitSampler() {
 
     let bit;
     if (absDistance < HYSTERESIS_BAND) {
-      bit = lastBitValue; 
+      bit = lastBitValue;
     } else {
       bit = brightness > threshold ? "1" : "0";
     }
@@ -567,7 +567,7 @@ function startBitSampler() {
 
     if (rxState === "SCANNING" && bit === "0") {
       ambientBaseline = EMA_ALPHA * brightness + (1 - EMA_ALPHA) * ambientBaseline;
-      threshold       = ambientBaseline + THRESHOLD_OFFSET;
+      threshold = ambientBaseline + THRESHOLD_OFFSET;
       statThreshold.textContent = Math.round(threshold);
     }
 
@@ -589,7 +589,7 @@ function forceDecodeAndStop(reason) {
 
   setRxState("COMPLETE");
   updateBanner("error", `${reason} — ${rxBitBuffer.length} BITS RECEIVED`, "⚠");
-  rxBitBuffer    = [];
+  rxBitBuffer = [];
   preambleWindow = [];
   reticleBox.classList.remove("locked");
 }
@@ -610,9 +610,9 @@ function processBit(bit) {
     if (windowStr === PREAMBLE) {
       log("rx-log", `★ PREAMBLE DETECTED [${PREAMBLE}] — Now reading data...`, "ok");
       setRxState("READING");
-      rxBitBuffer    = [];  
-      preambleWindow = [];  
-      readingStartTime = Date.now(); 
+      rxBitBuffer = [];
+      preambleWindow = [];
+      readingStartTime = Date.now();
       reticleBox.classList.add("locked");
 
       liveDecode.innerHTML = '<span class="cursor-blink"></span>';
@@ -620,7 +620,7 @@ function processBit(bit) {
       liveBitsProgress.textContent = "next char: 0/8 bits";
       decodedOutput.innerHTML = '<span class="dim">Receiving data...</span>';
       updateBanner("reading", "★ PREAMBLE FOUND — RECEIVING DATA...", "⬤");
-      
+
       // DEBUG: Log preamble detection for alignment check
       log("rx-log", `[DEBUG] Preamble detected, starting fresh buffer for payload`, "info");
     }
@@ -646,10 +646,10 @@ function processBit(bit) {
     // The space char (00100000) can create confusing patterns when followed by other bits
     if (rxBitBuffer.length >= POSTAMBLE.length && rxBitBuffer.length % 8 === 0) {
       const lastByte = rxBitBuffer.slice(-POSTAMBLE.length).join("");
-      
+
       if (lastByte === POSTAMBLE) {
         // ✓ Postamble detected at byte boundary!
-        clearInterval(sampleInterval); 
+        clearInterval(sampleInterval);
 
         // Extract payload: everything EXCEPT the last 8 bits (the postamble)
         const payloadBits = rxBitBuffer
@@ -664,7 +664,7 @@ function processBit(bit) {
 
         setRxState("COMPLETE");
         reticleBox.classList.remove("locked");
-        rxBitBuffer    = [];
+        rxBitBuffer = [];
         preambleWindow = [];
 
         log("rx-log", "✓ Transmission complete. Receiver auto-stopped.", "ok");
@@ -692,7 +692,7 @@ function updateLiveDecode() {
     } else if (charCode === 10) {
       decodedSoFar += "↵"; // Newline
     } else {
-      decodedSoFar += "·"; 
+      decodedSoFar += "·";
     }
   }
 
@@ -715,16 +715,16 @@ function decodePayload(bits) {
   let text = "";
   let charCodes = [];
   let validCharCount = 0;
-  
+
   // Process only complete 8-bit bytes
   const completeBytes = Math.floor(bits.length / 8);
   log("rx-log", `[DEBUG] Processing ${completeBytes} complete bytes...`, "info");
-  
+
   for (let i = 0; i < completeBytes; i++) {
     const byte = bits.slice(i * 8, (i + 1) * 8);
     const charCode = parseInt(byte, 2);
     charCodes.push({ byte, charCode, char: String.fromCharCode(charCode) });
-    
+
     // Accept printable ASCII (including space!) and common control characters
     if ((charCode >= 32 && charCode <= 126) || charCode === 10 || charCode === 13 || charCode === 9) {
       text += String.fromCharCode(charCode);
@@ -739,7 +739,7 @@ function decodePayload(bits) {
   }
 
   // Log each decoded byte
-  const charMapStr = charCodes.map((c, idx) => 
+  const charMapStr = charCodes.map((c, idx) =>
     `[${idx}]: ${c.byte} = ${c.charCode} = '${c.char}' ${(c.charCode >= 32 && c.charCode <= 126) ? '✓' : '✗'}`
   ).join(" | ");
   log("rx-log", `[DEBUG] Byte-by-byte: ${charMapStr}`, "info");
@@ -763,7 +763,10 @@ function decodePayload(bits) {
 
   setSignal("active", "MSG RX ✓");
 
-  updateBanner("complete", `✓ MESSAGE RECEIVED: "${text.length > 40 ? text.slice(0,40) + '…' : text}"`, "✓");
+  // Text-to-Speech: read message aloud if TTS is enabled
+  speakText(text);
+
+  updateBanner("complete", `✓ MESSAGE RECEIVED: "${text.length > 40 ? text.slice(0, 40) + '…' : text}"`, "✓");
 
   messageCount++;
   addToMessageHistory(text);
@@ -778,7 +781,7 @@ function addToMessageHistory(text) {
   entry.className = "msg-history-entry";
 
   const now = new Date();
-  const ts = `${String(now.getHours()).padStart(2,"0")}:${String(now.getMinutes()).padStart(2,"0")}:${String(now.getSeconds()).padStart(2,"0")}`;
+  const ts = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}:${String(now.getSeconds()).padStart(2, "0")}`;
 
   entry.innerHTML = `
     <span class="msg-num">#${messageCount}</span>
@@ -800,11 +803,11 @@ function setRxState(newState) {
   rxState = newState;
   rxStateBadge.className = "rx-state-badge " + newState.toLowerCase();
   rxStateBadge.textContent = newState;
-  statStatEl.textContent   = newState;
+  statStatEl.textContent = newState;
 
   reticleBox.classList.remove("scanning", "locked");
   if (newState === "SCANNING") reticleBox.classList.add("scanning");
-  if (newState === "READING")  reticleBox.classList.add("locked");
+  if (newState === "READING") reticleBox.classList.add("locked");
 
   if (newState === "SCANNING") {
     updateBanner("scanning", "SCANNING FOR PREAMBLE PATTERN [101011]...", "◎");
@@ -821,8 +824,7 @@ function setRxState(newState) {
   }
 }
 
-function updateBitBufferUI(bits, mode) 
-{
+function updateBitBufferUI(bits, mode) {
   if (!bits.length) {
     bitBufferEl.innerHTML = '<span class="dim">—</span>';
     return;
@@ -898,7 +900,95 @@ function drawGraph() {
   graphCtx.arc(dotX, dotY, 3, 0, Math.PI * 2);
   graphCtx.fillStyle = lastVal > threshold ? "var(--green)" : "rgba(57,255,20,0.4)";
   graphCtx.shadowColor = "rgba(57,255,20,0.8)";
-  graphCtx.shadowBlur  = lastVal > threshold ? 8 : 0;
-   graphCtx.fill();
-  graphCtx.shadowBlur = 0; 
+  graphCtx.shadowBlur = lastVal > threshold ? 8 : 0;
+  graphCtx.fill();
+  graphCtx.shadowBlur = 0;
+}
+
+// ─────────────────────────────────────────────
+//  ████████  VOICE-TO-TEXT (SENDER)  ████████
+// ─────────────────────────────────────────────
+
+const btnMic = document.getElementById("btn-mic");
+let speechRecognition = null;
+let isRecording = false;
+
+(function initSpeechRecognition() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    btnMic.title = "Speech recognition not supported in this browser";
+    btnMic.style.opacity = "0.3";
+    btnMic.style.cursor = "not-allowed";
+    return;
+  }
+
+  speechRecognition = new SpeechRecognition();
+  speechRecognition.continuous = false;
+  speechRecognition.interimResults = true;
+  speechRecognition.lang = "en-US";
+
+  speechRecognition.onresult = (event) => {
+    let transcript = "";
+    for (let i = 0; i < event.results.length; i++) {
+      transcript += event.results[i][0].transcript;
+    }
+    senderInput.value = transcript;
+    charCountEl.textContent = senderInput.value.length;
+  };
+
+  speechRecognition.onend = () => {
+    isRecording = false;
+    btnMic.classList.remove("recording");
+    btnMic.textContent = "\uD83C\uDFA4";
+    log("tx-log", "Voice input stopped.", "info");
+  };
+
+  speechRecognition.onerror = (event) => {
+    isRecording = false;
+    btnMic.classList.remove("recording");
+    btnMic.textContent = "\uD83C\uDFA4";
+    if (event.error !== "aborted") {
+      log("tx-log", `Voice error: ${event.error}`, "err");
+    }
+  };
+})();
+
+btnMic.addEventListener("click", () => {
+  if (!speechRecognition) {
+    log("tx-log", "Speech recognition not supported in this browser.", "err");
+    return;
+  }
+  if (isRecording) {
+    speechRecognition.stop();
+  } else {
+    isRecording = true;
+    btnMic.classList.add("recording");
+    btnMic.textContent = "\u23F9";
+    log("tx-log", "Listening for voice input...", "info");
+    speechRecognition.start();
+  }
+});
+
+// ─────────────────────────────────────────────
+//  ████████  TEXT-TO-SPEECH (RECEIVER)  ████████
+// ─────────────────────────────────────────────
+
+const ttsCheckbox = document.getElementById("tts-enabled");
+
+function speakText(text) {
+  if (!ttsCheckbox || !ttsCheckbox.checked) return;
+  if (!window.speechSynthesis) return;
+  if (!text || text.trim().length === 0) return;
+
+  // Cancel any previous speech
+  window.speechSynthesis.cancel();
+
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.lang = "en-US";
+  utterance.rate = 0.9;
+  utterance.pitch = 1.0;
+  utterance.volume = 1.0;
+
+  window.speechSynthesis.speak(utterance);
+  log("rx-log", `\uD83D\uDD0A Speaking: "${text}"`, "info");
 }
