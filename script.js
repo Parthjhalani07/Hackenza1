@@ -821,7 +821,8 @@ function setRxState(newState) {
   }
 }
 
-function updateBitBufferUI(bits, mode) {
+function updateBitBufferUI(bits, mode) 
+{
   if (!bits.length) {
     bitBufferEl.innerHTML = '<span class="dim">—</span>';
     return;
@@ -898,6 +899,6 @@ function drawGraph() {
   graphCtx.fillStyle = lastVal > threshold ? "var(--green)" : "rgba(57,255,20,0.4)";
   graphCtx.shadowColor = "rgba(57,255,20,0.8)";
   graphCtx.shadowBlur  = lastVal > threshold ? 8 : 0;
-  graphCtx.fill();
-  graphCtx.shadowBlur = 0;
+   graphCtx.fill();
+  graphCtx.shadowBlur = 0; 
 }
