@@ -92,16 +92,33 @@ function textToBinary(text) {
 }
 
 /** Convert a binary string back to ASCII text.
- * Processes 8 bits at a time.
+ * Processes 8 bits at a time with error handling.
  */
 function binaryToText(binary) {
+  if (!binary || binary.length === 0) return "";
+  
   // Trim to a multiple of 8
   const trimmed = binary.slice(0, Math.floor(binary.length / 8) * 8);
   let result = "";
+  
   for (let i = 0; i < trimmed.length; i += 8) {
     const byte = trimmed.slice(i, i + 8);
-    result += String.fromCharCode(parseInt(byte, 2));
+    if (byte.length !== 8) break;
+    
+    const charCode = parseInt(byte, 2);
+    
+    // Accept printable ASCII (32-126) and common control chars
+    if ((charCode >= 32 && charCode <= 126) || [9, 10, 13].includes(charCode)) {
+      result += String.fromCharCode(charCode);
+    } else if (charCode === 0) {
+      // Stop at null terminator
+      break;
+    } else {
+      // Skip non-printable characters
+      result += "";
+    }
   }
+  
   return result;
 }
 
@@ -619,18 +636,19 @@ function processBit(bit) {
     const bitsIntoChar = rxBitBuffer.length % 8;
     updateBanner("reading",
       `RECEIVING DATA — ${rxBitBuffer.length} bits (${charsDone} chars decoded)`,
-      "⬤");
+      "�●");
 
-    // ── THE HARD EDGE MECHANISM ──
-    if (rxBitBuffer.length % 8 === 0 && rxBitBuffer.length > 0) {
-      const lastByte = rxBitBuffer.slice(-8).join("");
-
+    // ── POSTAMBLE DETECTION (SLIDING WINDOW) ──
+    // Check if last 8 bits match postamble (sliding window, not just at byte boundary)
+    if (rxBitBuffer.length >= POSTAMBLE.length) {
+      const lastByte = rxBitBuffer.slice(-POSTAMBLE.length).join("");
+      
       if (lastByte === POSTAMBLE) {
-        // ✓ Postamble detected exactly at a byte boundary!
+        // ✓ Postamble detected!
         clearInterval(sampleInterval); 
 
         const payloadBits = rxBitBuffer
-          .slice(0, rxBitBuffer.length - 8)
+          .slice(0, rxBitBuffer.length - POSTAMBLE.length)
           .join("");
 
         log("rx-log", `★ POSTAMBLE DETECTED [${POSTAMBLE}] — Payload: ${payloadBits.length} bits`, "ok");
@@ -643,9 +661,34 @@ function processBit(bit) {
 
         log("rx-log", "✓ Transmission complete. Receiver auto-stopped.", "ok");
         log("rx-log", "Press START to receive another message.", "info");
+        return;
       }
     }
-    return;
+
+    // ── FALLBACK: Check every 8 bits for POSTAMBLE as emergency break ──
+    if (rxBitBuffer.length % 8 === 0 && rxBitBuffer.length >= POSTAMBLE.length) {
+      // Scan through the buffer for postamble anywhere (emergency decode)
+      const fullBuffer = rxBitBuffer.join("");
+      const postambleIndex = fullBuffer.indexOf(POSTAMBLE);
+      
+      if (postambleIndex !== -1 && postambleIndex % 8 === 0) {
+        // Found postamble at a byte boundary
+        clearInterval(sampleInterval);
+        
+        const payloadBits = fullBuffer.slice(0, postambleIndex);
+        log("rx-log", `★ POSTAMBLE FOUND (sliding) [${POSTAMBLE}] — Payload: ${payloadBits.length} bits`, "ok");
+        decodePayload(payloadBits);
+
+        setRxState("COMPLETE");
+        reticleBox.classList.remove("locked");
+        rxBitBuffer    = [];
+        preambleWindow = [];
+
+        log("rx-log", "✓ Transmission complete. Receiver auto-stopped.", "ok");
+        log("rx-log", "Press START to receive another message.", "info");
+        return;
+      }
+    }
   }
 }
 
@@ -671,7 +714,44 @@ function updateLiveDecode() {
 }
 
 function decodePayload(bits) {
-  const text = binaryToText(bits);
+  // Ensure bits string is properly formed
+  if (!bits || bits.length === 0) {
+    log("rx-log", "✗ Decode error: Empty payload", "err");
+    return;
+  }
+
+  // Pad to nearest 8-bit boundary for safety
+  const paddedBits = bits.padEnd(Math.ceil(bits.length / 8) * 8, "0");
+  
+  let text = "";
+  for (let i = 0; i < paddedBits.length; i += 8) {
+    const byte = paddedBits.slice(i, i + 8);
+    
+    // Skip incomplete bytes
+    if (byte.length < 8) break;
+    
+    const charCode = parseInt(byte, 2);
+    
+    // Accept printable ASCII and common control characters
+    if ((charCode >= 32 && charCode <= 126) || charCode === 10 || charCode === 13 || charCode === 9) {
+      text += String.fromCharCode(charCode);
+    } else if (charCode === 0) {
+      // Stop at null terminator if present
+      break;
+    } else {
+      // Replace unprintable with placeholder
+      text += "?";
+    }
+  }
+
+  // Remove trailing padding/garbage
+  text = text.trim();
+
+  if (text.length === 0) {
+    log("rx-log", "✗ Decode error: No valid characters extracted", "err");
+    return;
+  }
+
   log("rx-log", `✓ Decoded: "${text}" (${bits.length} bits → ${text.length} chars)`, "ok");
 
   decodedOutput.textContent = text;
