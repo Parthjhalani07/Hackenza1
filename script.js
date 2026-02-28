@@ -620,6 +620,9 @@ function processBit(bit) {
       liveBitsProgress.textContent = "next char: 0/8 bits";
       decodedOutput.innerHTML = '<span class="dim">Receiving data...</span>';
       updateBanner("reading", "★ PREAMBLE FOUND — RECEIVING DATA...", "⬤");
+      
+      // DEBUG: Log preamble detection for alignment check
+      log("rx-log", `[DEBUG] Preamble detected, starting fresh buffer for payload`, "info");
     }
     return;
   }
@@ -647,36 +650,13 @@ function processBit(bit) {
         // ✓ Postamble detected!
         clearInterval(sampleInterval); 
 
+        // Extract payload: everything EXCEPT the last 8 bits (the postamble)
         const payloadBits = rxBitBuffer
           .slice(0, rxBitBuffer.length - POSTAMBLE.length)
           .join("");
 
-        log("rx-log", `★ POSTAMBLE DETECTED [${POSTAMBLE}] — Payload: ${payloadBits.length} bits`, "ok");
-        decodePayload(payloadBits);
-
-        setRxState("COMPLETE");
-        reticleBox.classList.remove("locked");
-        rxBitBuffer    = [];
-        preambleWindow = [];
-
-        log("rx-log", "✓ Transmission complete. Receiver auto-stopped.", "ok");
-        log("rx-log", "Press START to receive another message.", "info");
-        return;
-      }
-    }
-
-    // ── FALLBACK: Check every 8 bits for POSTAMBLE as emergency break ──
-    if (rxBitBuffer.length % 8 === 0 && rxBitBuffer.length >= POSTAMBLE.length) {
-      // Scan through the buffer for postamble anywhere (emergency decode)
-      const fullBuffer = rxBitBuffer.join("");
-      const postambleIndex = fullBuffer.indexOf(POSTAMBLE);
-      
-      if (postambleIndex !== -1 && postambleIndex % 8 === 0) {
-        // Found postamble at a byte boundary
-        clearInterval(sampleInterval);
-        
-        const payloadBits = fullBuffer.slice(0, postambleIndex);
-        log("rx-log", `★ POSTAMBLE FOUND (sliding) [${POSTAMBLE}] — Payload: ${payloadBits.length} bits`, "ok");
+        log("rx-log", `★ POSTAMBLE DETECTED [${POSTAMBLE}] at position ${rxBitBuffer.length - POSTAMBLE.length}`, "ok");
+        log("rx-log", `Payload extracted: ${payloadBits.length} bits`, "ok");
         decodePayload(payloadBits);
 
         setRxState("COMPLETE");
@@ -720,10 +700,16 @@ function decodePayload(bits) {
     return;
   }
 
+  log("rx-log", `[DEBUG] Raw received bits: ${bits} (${bits.length} bits)`, "info");
+
   // Pad to nearest 8-bit boundary for safety
   const paddedBits = bits.padEnd(Math.ceil(bits.length / 8) * 8, "0");
   
+  log("rx-log", `[DEBUG] Padded bits: ${paddedBits}`, "info");
+  
   let text = "";
+  let charCodes = [];
+  
   for (let i = 0; i < paddedBits.length; i += 8) {
     const byte = paddedBits.slice(i, i + 8);
     
@@ -731,6 +717,7 @@ function decodePayload(bits) {
     if (byte.length < 8) break;
     
     const charCode = parseInt(byte, 2);
+    charCodes.push({ byte, charCode });
     
     // Accept printable ASCII and common control characters
     if ((charCode >= 32 && charCode <= 126) || charCode === 10 || charCode === 13 || charCode === 9) {
@@ -744,11 +731,41 @@ function decodePayload(bits) {
     }
   }
 
+  log("rx-log", `[DEBUG] Char mapping: ${charCodes.map(c => `${c.byte}(${c.charCode}:${String.fromCharCode(c.charCode) || '?'})`).join(" | ")}`, "info");
+
   // Remove trailing padding/garbage
   text = text.trim();
 
   if (text.length === 0) {
-    log("rx-log", "✗ Decode error: No valid characters extracted", "err");
+    // Try alternate alignments if nothing was decoded
+    log("rx-log", `[DEBUG] Standard alignment produced no text. Trying alternate alignments...`, "warn");
+    
+    for (let shift = 1; shift < 8; shift++) {
+      const shiftedBits = bits.slice(shift);
+      const shiftedPadded = shiftedBits.padEnd(Math.ceil(shiftedBits.length / 8) * 8, "0");
+      
+      let altText = "";
+      for (let i = 0; i < shiftedPadded.length; i += 8) {
+        const byte = shiftedPadded.slice(i, i + 8);
+        if (byte.length < 8) break;
+        const charCode = parseInt(byte, 2);
+        if ((charCode >= 32 && charCode <= 126) || charCode === 10 || charCode === 13 || charCode === 9) {
+          altText += String.fromCharCode(charCode);
+        } else if (charCode === 0) {
+          break;
+        }
+      }
+      
+      if (altText.trim().length > 0) {
+        log("rx-log", `[DEBUG] Shift by ${shift} bits produced: "${altText}"`, "info");
+        text = altText.trim();
+        break;
+      }
+    }
+  }
+
+  if (text.length === 0) {
+    log("rx-log", "✗ Decode error: No valid characters extracted from any alignment", "err");
     return;
   }
 
