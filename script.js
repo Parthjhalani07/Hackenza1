@@ -13,7 +13,7 @@
 const BIT_RATE_MS = 300;     // milliseconds per bit
 const PREAMBLE = "101011";
 const LEAD_IN = "1010101010101010";  // 16 warm-up bits before preamble
-const POSTAMBLE = "00000000"; // 8-bit null byte — can't appear in printable ASCII
+const POSTAMBLE = "00100100"; // '$' character (ASCII 36) — end-of-message marker
 const THRESHOLD_OFFSET = 30;      // brightness units above ambient to call a "1"
 const CALIB_DURATION_MS = 2000;    // how long to measure ambient during calibration
 const ROI_SIZE = 50;      // pixels — size of the "Target Box" sample region
