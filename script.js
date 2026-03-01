@@ -13,7 +13,7 @@
 const BIT_RATE_MS = 300;     // milliseconds per bit
 const PREAMBLE = "101011";
 const LEAD_IN = "1010101010101010";  // 16 warm-up bits before preamble
-const POSTAMBLE = "00000011"; // 8-bit ETX (End of Text) byte
+const POSTAMBLE = "0000000000000000"; // 16-bit all-zeros — can't appear in ASCII data
 const THRESHOLD_OFFSET = 30;      // brightness units above ambient to call a "1"
 const CALIB_DURATION_MS = 2000;    // how long to measure ambient during calibration
 const ROI_SIZE = 50;      // pixels — size of the "Target Box" sample region
@@ -719,7 +719,7 @@ function processBit(bit) {
       "●");
 
     // ── ROBUST POSTAMBLE DETECTION ──
-    // Strategy 1: Exact match (sliding window, not just byte-aligned)
+    // Strategy 1: Exact match (sliding window — safe because 16 zeros can't appear in ASCII text)
     if (rxBitBuffer.length >= POSTAMBLE.length) {
       const tail = rxBitBuffer.slice(-POSTAMBLE.length).join("");
       if (tail === POSTAMBLE) {
@@ -727,7 +727,7 @@ function processBit(bit) {
         const payloadBits = rxBitBuffer
           .slice(0, rxBitBuffer.length - POSTAMBLE.length)
           .join("");
-        log("rx-log", `★ POSTAMBLE DETECTED [${POSTAMBLE}] — exact match at position ${rxBitBuffer.length - POSTAMBLE.length}`, "ok");
+        log("rx-log", `★ POSTAMBLE DETECTED [${POSTAMBLE}] — exact match at byte boundary`, "ok");
         log("rx-log", `Payload: ${payloadBits.length} bits (${Math.floor(payloadBits.length / 8)} bytes)`, "ok");
         decodePayload(payloadBits);
 
