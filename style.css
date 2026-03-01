@@ -1347,3 +1347,87 @@ textarea::placeholder {
     box-shadow: 0 0 18px var(--amber), 0 0 30px var(--amber-dim);
   }
 }
+
+/* ── SOS Quick Command Grid ── */
+.sos-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+}
+
+.sos-btn {
+  font-family: var(--font-disp);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  padding: 10px 4px;
+  border: 1px solid var(--border2);
+  border-radius: var(--radius);
+  background: var(--bg3);
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: all var(--trans);
+  text-align: center;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.sos-btn:hover,
+.sos-btn:active {
+  border-color: var(--cyan);
+  color: var(--cyan);
+  background: var(--cyan-glow);
+  transform: scale(0.96);
+}
+
+.sos-btn.sos-critical {
+  border-color: var(--red);
+  color: var(--red);
+  background: rgba(255, 49, 49, 0.08);
+}
+
+.sos-btn.sos-critical:hover,
+.sos-btn.sos-critical:active {
+  background: var(--red);
+  color: var(--bg);
+  box-shadow: 0 0 12px var(--red);
+}
+
+.sos-btn.sos-warn {
+  border-color: var(--amber-dim);
+  color: var(--amber);
+  background: rgba(245, 166, 35, 0.06);
+}
+
+.sos-btn.sos-warn:hover,
+.sos-btn.sos-warn:active {
+  background: var(--amber);
+  color: var(--bg);
+  box-shadow: 0 0 12px var(--amber);
+}
+
+.sos-btn.sos-ok {
+  border-color: var(--green-dim);
+  color: var(--green);
+  background: rgba(57, 255, 20, 0.06);
+}
+
+.sos-btn.sos-ok:hover,
+.sos-btn.sos-ok:active {
+  background: var(--green);
+  color: var(--bg);
+}
+
+.sos-btn.sos-no {
+  border-color: var(--red-dim);
+  color: var(--red);
+  background: rgba(255, 49, 49, 0.05);
+}
+
+.sos-btn.sos-no:hover,
+.sos-btn.sos-no:active {
+  background: var(--red);
+  color: var(--bg);
+}

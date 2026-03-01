@@ -172,6 +172,18 @@ senderInput.addEventListener("input", () => {
   charCountEl.textContent = senderInput.value.length;
 });
 
+// ── SOS QUICK COMMANDS ──
+document.querySelectorAll(".sos-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    const cmd = btn.dataset.cmd;
+    senderInput.value = cmd;
+    charCountEl.textContent = cmd.length;
+    // Auto-encode and enable transmit
+    btnConvert.click();
+    log("tx-log", `⚡ Quick command: ${cmd}`, "info");
+  });
+});
+
 // ── ENCODE BUTTON ──
 btnConvert.addEventListener("click", () => {
   const text = senderInput.value.trim();
