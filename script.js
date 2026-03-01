@@ -874,8 +874,8 @@ function decodePayload(bits) {
 
   setSignal("active", "MSG RX ✓");
 
-  // Text-to-Speech: read message aloud if TTS is enabled
-  speakText(text);
+  // Text-to-Speech: store message and optionally read aloud
+  onMessageDecoded(text);
 
   updateBanner("complete", `✓ MESSAGE RECEIVED: "${text.length > 40 ? text.slice(0, 40) + '…' : text}"`, "✓");
 
@@ -1085,10 +1085,15 @@ btnMic.addEventListener("click", () => {
 // ─────────────────────────────────────────────
 
 const ttsCheckbox = document.getElementById("tts-enabled");
+const btnSpeak = document.getElementById("btn-speak");
+let lastDecodedMessage = "";
 
+/** Speak the given text aloud using Web Speech API */
 function speakText(text) {
-  if (!ttsCheckbox || !ttsCheckbox.checked) return;
-  if (!window.speechSynthesis) return;
+  if (!window.speechSynthesis) {
+    log("rx-log", "Speech synthesis not supported in this browser.", "err");
+    return;
+  }
   if (!text || text.trim().length === 0) return;
 
   // Cancel any previous speech
@@ -1103,6 +1108,28 @@ function speakText(text) {
   window.speechSynthesis.speak(utterance);
   log("rx-log", `\uD83D\uDD0A Speaking: "${text}"`, "info");
 }
+
+/** Called after a message is decoded — store it and enable the button */
+function onMessageDecoded(text) {
+  lastDecodedMessage = text;
+  btnSpeak.disabled = false;
+  btnSpeak.textContent = "🔊 SPEAK MESSAGE";
+
+  // Auto-speak only if checkbox is checked (unreliable on Android without gesture)
+  if (ttsCheckbox && ttsCheckbox.checked) {
+    speakText(text);
+  }
+}
+
+// ── SPEAK BUTTON — user tap satisfies Android audio gesture requirement ──
+btnSpeak.addEventListener("click", () => {
+  if (lastDecodedMessage) {
+    speakText(lastDecodedMessage);
+  } else {
+    log("rx-log", "No message to speak yet.", "err");
+  }
+});
+
 
 // ─────────────────────────────────────────────
 //  ████████  VOLUME BUTTON CONTROLS  ████████

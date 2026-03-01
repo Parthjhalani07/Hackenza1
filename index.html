@@ -188,14 +188,16 @@
 
           <div class="section-label" style="display:flex;justify-content:space-between;align-items:center">
             <span>// DECODED MESSAGE</span>
-            <label class="tts-toggle" title="Read aloud on receive">
-              <input type="checkbox" id="tts-enabled" checked />
-              <span class="tts-label">🔊 TTS</span>
+            <label class="tts-toggle" title="Auto-read aloud on receive">
+              <input type="checkbox" id="tts-enabled" />
+              <span class="tts-label">AUTO TTS</span>
             </label>
           </div>
           <div class="decoded-output" id="decoded-output">
             <span class="dim">Waiting for signal...</span>
           </div>
+          <button id="btn-speak" class="action-btn primary speak-btn" disabled
+            title="Tap to hear the decoded message">🔊 SPEAK MESSAGE</button>
 
           <div class="section-label" style="margin-top:12px">// MESSAGE HISTORY</div>
           <div class="message-history" id="message-history">

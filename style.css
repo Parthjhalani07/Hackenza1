@@ -1320,3 +1320,30 @@ textarea::placeholder {
 ::-webkit-scrollbar-thumb:hover {
   background: var(--amber-dim);
 }
+
+/* ── Speak Button ── */
+.speak-btn {
+  margin-top: 10px;
+  width: 100%;
+  min-height: 48px;
+  font-size: 13px;
+  letter-spacing: 0.15em;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+.speak-btn:not(:disabled) {
+  animation: speak-glow 2s ease-in-out infinite;
+}
+
+@keyframes speak-glow {
+
+  0%,
+  100% {
+    box-shadow: 0 0 8px var(--amber-dim);
+  }
+
+  50% {
+    box-shadow: 0 0 18px var(--amber), 0 0 30px var(--amber-dim);
+  }
+}
