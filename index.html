@@ -197,6 +197,42 @@
             <span class="dim">Waiting for signal...</span>
           </div>
 
+          <div class="section-label"
+            style="margin-top:12px;display:flex;justify-content:space-between;align-items:center">
+            <span>// OVERSAMPLING DEBUGGER</span>
+            <label class="tts-toggle">
+              <input type="checkbox" id="debug-enabled" />
+              <span class="tts-label">🔍 DEBUG</span>
+            </label>
+          </div>
+          <div id="debug-panel" class="debug-panel hidden">
+            <div class="debug-stats">
+              <div class="debug-stat">
+                <span class="debug-label">SAMPLES</span>
+                <span class="debug-val" id="dbg-samples">0</span>
+              </div>
+              <div class="debug-stat">
+                <span class="debug-label">MEDIAN</span>
+                <span class="debug-val" id="dbg-median">—</span>
+              </div>
+              <div class="debug-stat">
+                <span class="debug-label">THRESHOLD</span>
+                <span class="debug-val" id="dbg-threshold">—</span>
+              </div>
+              <div class="debug-stat">
+                <span class="debug-label">BIT</span>
+                <span class="debug-val" id="dbg-bit">—</span>
+              </div>
+            </div>
+            <div class="debug-sample-bar-wrap">
+              <div class="debug-sample-bar" id="dbg-bar"></div>
+              <div class="debug-threshold-line" id="dbg-thresh-line"></div>
+            </div>
+            <div class="debug-log" id="debug-log">
+              <span class="dim">Bit decisions will appear here...</span>
+            </div>
+          </div>
+
           <div class="section-label" style="margin-top:12px">// MESSAGE HISTORY</div>
           <div class="message-history" id="message-history">
             <div class="dim">No messages received yet.</div>

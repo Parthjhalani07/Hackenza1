@@ -406,6 +406,7 @@ async function startReceiver() {
 
   rxBitBuffer = [];
   preambleWindow = [];
+  debugBitCount = 0;
 
   startBrightnessLoop();
   await runCalibration();
@@ -523,6 +524,22 @@ async function runCalibration() {
 let lastBitValue = "0";
 let oversampleBuffer = [];   // collects brightness readings within each bit window
 let lastBitTime = 0;         // when the current bit window started
+let debugBitCount = 0;       // total bits read for debug numbering
+
+// Debug panel DOM refs
+const debugCheckbox = document.getElementById("debug-enabled");
+const debugPanel = document.getElementById("debug-panel");
+const dbgSamples = document.getElementById("dbg-samples");
+const dbgMedian = document.getElementById("dbg-median");
+const dbgThreshold = document.getElementById("dbg-threshold");
+const dbgBit = document.getElementById("dbg-bit");
+const dbgBar = document.getElementById("dbg-bar");
+const dbgThreshLine = document.getElementById("dbg-thresh-line");
+const dbgLog = document.getElementById("debug-log");
+
+debugCheckbox.addEventListener("change", () => {
+  debugPanel.classList.toggle("hidden", !debugCheckbox.checked);
+});
 
 function median(arr) {
   if (!arr.length) return 0;
@@ -557,6 +574,11 @@ function startBitSampler() {
     // Collect a sample into the buffer
     oversampleBuffer.push(currentBrightness);
 
+    // Live debug: show sample count as it fills
+    if (debugCheckbox.checked) {
+      dbgSamples.textContent = oversampleBuffer.length;
+    }
+
     // Check if a full bit window has elapsed
     const now = performance.now();
     if (now - lastBitTime < BIT_RATE_MS) return; // not time yet
@@ -564,8 +586,9 @@ function startBitSampler() {
     if (now - lastBitTime > BIT_RATE_MS) lastBitTime = now; // prevent drift
 
     // ── Use MEDIAN of all samples in this window ──
-    const brightness = oversampleBuffer.length > 0
-      ? median(oversampleBuffer)
+    const samplesThisWindow = [...oversampleBuffer];
+    const brightness = samplesThisWindow.length > 0
+      ? median(samplesThisWindow)
       : currentBrightness;
     oversampleBuffer = []; // reset for next bit window
 
@@ -587,6 +610,41 @@ function startBitSampler() {
       ambientBaseline = EMA_ALPHA * brightness + (1 - EMA_ALPHA) * ambientBaseline;
       threshold = ambientBaseline + THRESHOLD_OFFSET;
       statThreshold.textContent = Math.round(threshold);
+    }
+
+    // ── Update debug panel ──
+    if (debugCheckbox.checked) {
+      debugBitCount++;
+      const medVal = Math.round(brightness);
+      const thrVal = Math.round(threshold);
+
+      dbgMedian.textContent = medVal;
+      dbgThreshold.textContent = thrVal;
+      dbgBit.textContent = bit;
+      dbgBit.className = "debug-val bit-" + bit;
+
+      // Sample bar: brightness as % of 255
+      const pct = Math.min(100, (brightness / 255) * 100);
+      dbgBar.style.width = pct + "%";
+      dbgBar.className = "debug-sample-bar" + (bit === "1" ? " high" : "");
+
+      // Threshold line position
+      const thrPct = Math.min(100, (threshold / 255) * 100);
+      dbgThreshLine.style.left = thrPct + "%";
+
+      // Log entry with sample details
+      const minS = Math.round(Math.min(...samplesThisWindow));
+      const maxS = Math.round(Math.max(...samplesThisWindow));
+      const cls = bit === "1" ? "dbg-1" : "dbg-0";
+      const hysteresis = absDistance < HYSTERESIS_BAND ? ' <span class="dbg-h">[H]</span>' : "";
+      const entry = `<div><span class="${cls}">#${debugBitCount} BIT=${bit}</span> | median=${medVal} thr=${thrVal} | ${samplesThisWindow.length} samples [${minS}..${maxS}] conf=${lastBitConfidence}%${hysteresis}</div>`;
+
+      if (debugBitCount === 1) dbgLog.innerHTML = "";
+      dbgLog.innerHTML += entry;
+      dbgLog.scrollTop = dbgLog.scrollHeight;
+
+      // Keep log manageable
+      while (dbgLog.children.length > 50) dbgLog.removeChild(dbgLog.firstChild);
     }
 
     processBit(bit);
