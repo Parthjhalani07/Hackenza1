@@ -715,36 +715,102 @@ function processBit(bit) {
     const bitsIntoChar = rxBitBuffer.length % 8;
     updateBanner("reading",
       `RECEIVING DATA — ${rxBitBuffer.length} bits (${charsDone} chars decoded)`,
-      "�●");
+      "●");
 
-    // ── POSTAMBLE DETECTION (BYTE-ALIGNED ONLY) ──
-    // Only check for postamble at byte boundaries to prevent false positives
-    // The space char (00100000) can create confusing patterns when followed by other bits
-    if (rxBitBuffer.length >= POSTAMBLE.length && rxBitBuffer.length % 8 === 0) {
-      const lastByte = rxBitBuffer.slice(-POSTAMBLE.length).join("");
-
-      if (lastByte === POSTAMBLE) {
-        // ✓ Postamble detected at byte boundary!
+    // ── ROBUST POSTAMBLE DETECTION ──
+    // Strategy 1: Exact match (sliding window, not just byte-aligned)
+    if (rxBitBuffer.length >= POSTAMBLE.length) {
+      const tail = rxBitBuffer.slice(-POSTAMBLE.length).join("");
+      if (tail === POSTAMBLE) {
         clearInterval(sampleInterval);
-
-        // Extract payload: everything EXCEPT the last 8 bits (the postamble)
         const payloadBits = rxBitBuffer
           .slice(0, rxBitBuffer.length - POSTAMBLE.length)
           .join("");
-
-        log("rx-log", `★ POSTAMBLE DETECTED [${POSTAMBLE}] at byte-aligned position ${rxBitBuffer.length - POSTAMBLE.length}`, "ok");
-        log("rx-log", `Payload extracted: ${payloadBits.length} bits (${Math.floor(payloadBits.length / 8)} complete bytes)`, "ok");
-        log("rx-log", `[DEBUG] Full buffer before extraction: ${rxBitBuffer.join("")}`, "info");
-        log("rx-log", `[DEBUG] Payload bits: ${payloadBits}`, "info");
+        log("rx-log", `★ POSTAMBLE DETECTED [${POSTAMBLE}] — exact match at position ${rxBitBuffer.length - POSTAMBLE.length}`, "ok");
+        log("rx-log", `Payload: ${payloadBits.length} bits (${Math.floor(payloadBits.length / 8)} bytes)`, "ok");
         decodePayload(payloadBits);
 
         setRxState("COMPLETE");
         reticleBox.classList.remove("locked");
         rxBitBuffer = [];
         preambleWindow = [];
-
         log("rx-log", "✓ Transmission complete. Receiver auto-stopped.", "ok");
-        log("rx-log", "Press START to receive another message.", "info");
+        updateBanner("complete", "✓ MESSAGE RECEIVED", "✓");
+
+        // Reset for next message
+        setTimeout(() => {
+          if (rxState === "COMPLETE") {
+            setRxState("SCANNING");
+            reticleBox.classList.remove("locked");
+            updateBanner("scanning", "SCANNING FOR PREAMBLE PATTERN [101011]...", "◎");
+            log("rx-log", "Auto-resumed scanning for next message.", "info");
+          }
+        }, 3000);
+        return;
+      }
+    }
+
+    // Strategy 2: Fuzzy match — allow 1-bit error at byte boundaries
+    if (rxBitBuffer.length >= POSTAMBLE.length && rxBitBuffer.length % 8 === 0) {
+      const tail = rxBitBuffer.slice(-POSTAMBLE.length).join("");
+      let mismatches = 0;
+      for (let i = 0; i < POSTAMBLE.length; i++) {
+        if (tail[i] !== POSTAMBLE[i]) mismatches++;
+      }
+      if (mismatches === 1) {
+        clearInterval(sampleInterval);
+        const payloadBits = rxBitBuffer
+          .slice(0, rxBitBuffer.length - POSTAMBLE.length)
+          .join("");
+        log("rx-log", `★ POSTAMBLE DETECTED [${tail}] — fuzzy match (1-bit error) at byte boundary`, "ok");
+        log("rx-log", `Payload: ${payloadBits.length} bits (${Math.floor(payloadBits.length / 8)} bytes)`, "ok");
+        decodePayload(payloadBits);
+
+        setRxState("COMPLETE");
+        reticleBox.classList.remove("locked");
+        rxBitBuffer = [];
+        preambleWindow = [];
+        log("rx-log", "✓ Transmission complete (fuzzy postamble).", "ok");
+        updateBanner("complete", "✓ MESSAGE RECEIVED", "✓");
+
+        setTimeout(() => {
+          if (rxState === "COMPLETE") {
+            setRxState("SCANNING");
+            updateBanner("scanning", "SCANNING FOR PREAMBLE PATTERN [101011]...", "◎");
+            log("rx-log", "Auto-resumed scanning for next message.", "info");
+          }
+        }, 3000);
+        return;
+      }
+    }
+
+    // Strategy 3: Silence detection — if we see 10+ zeros in a row, sender has stopped
+    if (rxBitBuffer.length >= 10) {
+      const lastTen = rxBitBuffer.slice(-10).join("");
+      if (lastTen === "0000000000" && rxBitBuffer.length > POSTAMBLE.length) {
+        clearInterval(sampleInterval);
+        // Strip trailing zeros (silence) to find payload
+        let endIdx = rxBitBuffer.length;
+        while (endIdx > 0 && rxBitBuffer[endIdx - 1] === "0") endIdx--;
+        const payloadBits = rxBitBuffer.slice(0, endIdx).join("");
+        log("rx-log", `⚠ SILENCE DETECTED — 10+ zeros. Auto-decoding ${payloadBits.length} bits`, "err");
+        if (payloadBits.length >= 8) {
+          decodePayload(payloadBits);
+        }
+
+        setRxState("COMPLETE");
+        reticleBox.classList.remove("locked");
+        rxBitBuffer = [];
+        preambleWindow = [];
+        updateBanner("complete", "✓ MESSAGE RECEIVED (SILENCE DETECT)", "✓");
+
+        setTimeout(() => {
+          if (rxState === "COMPLETE") {
+            setRxState("SCANNING");
+            updateBanner("scanning", "SCANNING FOR PREAMBLE PATTERN [101011]...", "◎");
+            log("rx-log", "Auto-resumed scanning for next message.", "info");
+          }
+        }, 3000);
         return;
       }
     }
