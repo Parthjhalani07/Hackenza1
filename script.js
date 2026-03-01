@@ -719,8 +719,10 @@ function processBit(bit) {
       "●");
 
     // ── ROBUST POSTAMBLE DETECTION ──
-    // Strategy 1: Exact match (sliding window — safe because 16 zeros can't appear in ASCII text)
-    if (rxBitBuffer.length >= POSTAMBLE.length) {
+    // Preamble uses sliding window (SCANNING state), but once detected, rxBitBuffer resets.
+    // Data arrives in 8-bit chars, so postamble (16 zeros) always lands on a byte boundary.
+    // Byte-aligned check prevents partial overlap (e.g. last data bit '0' merging into postamble).
+    if (rxBitBuffer.length >= POSTAMBLE.length && rxBitBuffer.length % 8 === 0) {
       const tail = rxBitBuffer.slice(-POSTAMBLE.length).join("");
       if (tail === POSTAMBLE) {
         clearInterval(sampleInterval);
