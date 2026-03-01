@@ -753,41 +753,7 @@ function processBit(bit) {
       }
     }
 
-    // Strategy 2: Fuzzy match — allow 1-bit error at byte boundaries
-    if (rxBitBuffer.length >= POSTAMBLE.length && rxBitBuffer.length % 8 === 0) {
-      const tail = rxBitBuffer.slice(-POSTAMBLE.length).join("");
-      let mismatches = 0;
-      for (let i = 0; i < POSTAMBLE.length; i++) {
-        if (tail[i] !== POSTAMBLE[i]) mismatches++;
-      }
-      if (mismatches === 1) {
-        clearInterval(sampleInterval);
-        const payloadBits = rxBitBuffer
-          .slice(0, rxBitBuffer.length - POSTAMBLE.length)
-          .join("");
-        log("rx-log", `★ POSTAMBLE DETECTED [${tail}] — fuzzy match (1-bit error) at byte boundary`, "ok");
-        log("rx-log", `Payload: ${payloadBits.length} bits (${Math.floor(payloadBits.length / 8)} bytes)`, "ok");
-        decodePayload(payloadBits);
-
-        setRxState("COMPLETE");
-        reticleBox.classList.remove("locked");
-        rxBitBuffer = [];
-        preambleWindow = [];
-        log("rx-log", "✓ Transmission complete (fuzzy postamble).", "ok");
-        updateBanner("complete", "✓ MESSAGE RECEIVED", "✓");
-
-        setTimeout(() => {
-          if (rxState === "COMPLETE") {
-            setRxState("SCANNING");
-            updateBanner("scanning", "SCANNING FOR PREAMBLE PATTERN [101011]...", "◎");
-            log("rx-log", "Auto-resumed scanning for next message.", "info");
-          }
-        }, 3000);
-        return;
-      }
-    }
-
-    // Strategy 3: Silence detection — if we see 10+ zeros in a row, sender has stopped
+    // Strategy 2: Silence detection — if we see 10+ zeros in a row, sender has stopped
     if (rxBitBuffer.length >= 10) {
       const lastTen = rxBitBuffer.slice(-10).join("");
       if (lastTen === "0000000000" && rxBitBuffer.length > POSTAMBLE.length) {
