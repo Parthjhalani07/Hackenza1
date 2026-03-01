@@ -521,10 +521,22 @@ async function runCalibration() {
 }
 
 let lastBitValue = "0";
+let oversampleBuffer = [];   // collects brightness readings within each bit window
+let lastBitTime = 0;         // when the current bit window started
+
+function median(arr) {
+  if (!arr.length) return 0;
+  const sorted = [...arr].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid];
+}
 
 function startBitSampler() {
   clearInterval(sampleInterval);
+  oversampleBuffer = [];
+  lastBitTime = performance.now();
 
+  // Poll every 20ms (~50Hz) — collects ~15 samples per 300ms bit window
   sampleInterval = setInterval(() => {
     if (rxState === "IDLE" || rxState === "CALIBRATING" || rxState === "COMPLETE") return;
 
@@ -532,24 +544,30 @@ function startBitSampler() {
       const elapsed = Date.now() - readingStartTime;
       if (elapsed > READING_TIMEOUT_MS) {
         log("rx-log", "TIMEOUT: Reading exceeded 60s limit. Forcing decode.", "err");
-        forceDecodeAndStop("TIMEOUT — PARTIAL DECODE");
+        forceDecodeAndStop("TIMEOUT \u2014 PARTIAL DECODE");
         return;
       }
       if (rxBitBuffer.length >= MAX_PAYLOAD_BITS) {
         log("rx-log", `MAX BITS: ${MAX_PAYLOAD_BITS} bits received. Forcing decode.`, "err");
-        forceDecodeAndStop("MAX BITS — PARTIAL DECODE");
+        forceDecodeAndStop("MAX BITS \u2014 PARTIAL DECODE");
         return;
       }
     }
 
-    // ── TRUE MULTI-SAMPLING ──
-    // Average the last 5 frames (~80ms of visual data) to smooth out underwater ripples
-    const recentSamples = graphData.slice(-5);
-    const avgBrightness = recentSamples.length > 0
-      ? recentSamples.reduce((a, b) => a + b, 0) / recentSamples.length
-      : currentBrightness;
+    // Collect a sample into the buffer
+    oversampleBuffer.push(currentBrightness);
 
-    const brightness = avgBrightness;
+    // Check if a full bit window has elapsed
+    const now = performance.now();
+    if (now - lastBitTime < BIT_RATE_MS) return; // not time yet
+    lastBitTime += BIT_RATE_MS;
+    if (now - lastBitTime > BIT_RATE_MS) lastBitTime = now; // prevent drift
+
+    // ── Use MEDIAN of all samples in this window ──
+    const brightness = oversampleBuffer.length > 0
+      ? median(oversampleBuffer)
+      : currentBrightness;
+    oversampleBuffer = []; // reset for next bit window
 
     const distFromThreshold = brightness - threshold;
     const absDistance = Math.abs(distFromThreshold);
@@ -573,7 +591,7 @@ function startBitSampler() {
 
     processBit(bit);
 
-  }, BIT_RATE_MS);
+  }, 20); // 20ms polling = ~15 samples per 300ms bit window
 }
 
 function forceDecodeAndStop(reason) {
