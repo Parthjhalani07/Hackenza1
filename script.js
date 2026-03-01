@@ -875,8 +875,8 @@ function decodePayload(bits) {
       text += String.fromCharCode(charCode);
       validCharCount++;
     } else if (charCode === 0) {
-      // Stop at null terminator if present
-      break;
+      // Null byte (could be postamble leaking into payload) — skip, don't stop
+      continue;
     } else {
       // For non-printable, show what it is
       text += `[${charCode}]`;
