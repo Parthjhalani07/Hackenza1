@@ -12,6 +12,7 @@
 // ─────────────────────────────────────────────
 const BIT_RATE_MS = 300;     // milliseconds per bit
 const PREAMBLE = "101011";
+const LEAD_IN = "1010101010101010";  // 16 warm-up bits before preamble
 const POSTAMBLE = "00000011"; // 8-bit ETX (End of Text) byte
 const THRESHOLD_OFFSET = 30;      // brightness units above ambient to call a "1"
 const CALIB_DURATION_MS = 2000;    // how long to measure ambient during calibration
@@ -201,8 +202,8 @@ btnTransmit.addEventListener("click", async () => {
 
   await initTorch();
 
-  const fullFrame = PREAMBLE + binary + POSTAMBLE;
-  log("tx-log", `Frame: ${fullFrame.length} bits total`, "info");
+  const fullFrame = LEAD_IN + PREAMBLE + binary + POSTAMBLE;
+  log("tx-log", `Frame: ${LEAD_IN.length} lead-in + ${PREAMBLE.length} preamble + ${binary.length} data + ${POSTAMBLE.length} postamble = ${fullFrame.length} bits`, "info");
   log("tx-log", "Transmitting...", "tx");
 
   txActive = true;
